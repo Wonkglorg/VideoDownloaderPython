@@ -28,10 +28,24 @@ class YTVideoDownloader:
         self.audio_formats = audio_formats
 
     def download(self, url: str, output_dir: str, file_format: str = "mp4", with_meta: bool = True, retries: int = 5,
-                 backoff_factor: float = 1, show_album_cover: bool = True, album_cover_image: str = None,
+                 create_single_frame_video: bool = False,
+                 backoff_factor: float = 1, show_album_cover_on_mp3: bool = True,
+                 album_cover_image: str = None,
                  threads: int = 4,
                  file_name_template: str = "{title}") -> None:
-
+        """
+        @:parameter url the url of the video / playlist to download \n
+        @:parameter output_dir the path of the output directory \n
+        @:parameter file_format the file format of the video \n
+        @:parameter with_meta if the meta should be injected into the output \n
+        @:parameter retries number of retries to download the video before quitting \n
+        @:parameter create_single_frame_video if the video should be created in a single frame (also requires album_cover_image to be set \n
+        @:parameter backoff_factor the factor to increase the download delay \n
+        @:parameter show_album_cover_on_mp3 if the album cover should be shown on mp3 file formats (if no cover is selected tries to download the first frame from the video as the cover) \n
+        @:parameter album_cover_image the album cover image to use  \n
+        @:parameter threads number of download threads \n
+        @:parameter file_name_template the file name template to use for the file output
+        """
         os.makedirs(output_dir, exist_ok=True)
         file_format = file_format.lower()
         for attempt in range(retries):
@@ -47,14 +61,15 @@ class YTVideoDownloader:
 
                     if is_playlist:
                         self.download_playlist(url, output_dir, info_dict, file_format, threads, with_meta,
-                                               show_album_cover,
+                                               show_album_cover_on_mp3,
                                                album_cover_image,
                                                retries, backoff_factor,
                                                file_name_template, is_playlist)
                         return
                     else:
                         if file_format in self.audio_formats:
-                            self._download_audio(url, output_dir, info_dict, file_format, with_meta, show_album_cover,
+                            self._download_audio(url, output_dir, info_dict, file_format, with_meta,
+                                                 show_album_cover_on_mp3,
                                                  album_cover_image,
                                                  file_name_template, is_playlist)
                         else:
@@ -78,7 +93,6 @@ class YTVideoDownloader:
                           album_cover_image: str = None, retries: int = 5,
                           backoff_factor: float = 1,
                           file_name_template: str = "{title}", is_playlist: bool = False) -> None:
-
         playlist_name = info_dict.get('title', 'playlist')
         sanitized_playlist_name = self._sanitize_for_windows(playlist_name)
         playlist_dir = os.path.join(output_dir, sanitized_playlist_name)
