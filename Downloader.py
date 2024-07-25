@@ -11,6 +11,8 @@ import yt_dlp
 from urllib3.connection import HTTPSConnection
 from urllib3.exceptions import ReadTimeoutError
 
+#todo:jmd figure out what metadata is actually important and mostly valid? Create own mp3 plugin for eagle which takes in the mp3 files meta data and gets its thumbnail if one exists
+# Once this is completed continue with eagle plugins.
 
 class YTVideoDownloader:
 
