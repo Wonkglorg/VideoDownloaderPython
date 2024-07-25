@@ -29,6 +29,7 @@ class YTVideoDownloader:
 
     def download(self, url: str, output_dir: str, file_format: str = "mp4", with_meta: bool = True, retries: int = 5,
                  backoff_factor: float = 1, show_album_cover: bool = True, album_cover_image: str = None,
+                 threads: int = 4,
                  file_name_template: str = "{title}") -> None:
 
         os.makedirs(output_dir, exist_ok=True)
@@ -45,7 +46,8 @@ class YTVideoDownloader:
                     is_playlist = info_dict.get('_type') == 'playlist'
 
                     if is_playlist:
-                        self.download_playlist(url, output_dir, info_dict, file_format, with_meta, show_album_cover,
+                        self.download_playlist(url, output_dir, info_dict, file_format, threads, with_meta,
+                                               show_album_cover,
                                                album_cover_image,
                                                retries, backoff_factor,
                                                file_name_template, is_playlist)
@@ -70,7 +72,8 @@ class YTVideoDownloader:
                     print("All retries failed.")
                     raise
 
-    def download_playlist(self, url: str, output_dir: str, info_dict: dict, file_format: str, with_meta: bool = True,
+    def download_playlist(self, url: str, output_dir: str, info_dict: dict, file_format: str, threads,
+                          with_meta: bool = True,
                           show_album_cover: bool = True,
                           album_cover_image: str = None, retries: int = 5,
                           backoff_factor: float = 1,
@@ -83,7 +86,7 @@ class YTVideoDownloader:
         output_dir = playlist_dir
         print(f"Downloading playlist: {playlist_name}")
 
-        with ThreadPoolExecutor(max_workers=4) as executor:
+        with ThreadPoolExecutor(max_workers=threads) as executor:
             future_to_entry = {
                 executor.submit(self._download_entry, entry, output_dir, file_format, with_meta, show_album_cover,
                                 album_cover_image, file_name_template, is_playlist, retries, backoff_factor): entry
