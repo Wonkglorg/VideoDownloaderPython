@@ -27,12 +27,19 @@ class YTVideoDownloader:
         self.video_formats = video_formats
         self.audio_formats = audio_formats
 
+        """
+        Custom Downloader Option mimics the behaviour of mp3's with a thumbnail but as a 1 fps size optimized mp4 format
+        :param video_url: 
+        :return: 
+        """
+
     def download(self, url: str, output_dir: str, file_format: str = "mp4", with_meta: bool = True, retries: int = 5,
-                 create_single_frame_video: bool = False,
                  backoff_factor: float = 1, show_album_cover_on_mp3: bool = True,
                  album_cover_image: str = None,
                  threads: int = 4,
+                 custom_ffmpeg_command: array = None,
                  file_name_template: str = "{title}") -> None:
+        # todo:jmd add custom ffmpeg command resolver, provide placholders like, "file path" "output file path" etc, then let it modify the file, for example making it 1 frame or similar, could be quite handy. otherwise id have to make so many different methods for stuff.
         """
         @:parameter url the url of the video / playlist to download \n
         @:parameter output_dir the path of the output directory \n
