@@ -34,7 +34,7 @@ class YTVideoDownloader:
                                     subfolder_playlists: bool = True,
                                     retries: int = 5,
                                     backoff_factor: float = 1,
-                                    file_name_template: str = "{title}") -> None:
+                                    file_name_template: str = "{title}") -> dict:
         """
 
         :param the url of the video / playlist to download
@@ -46,6 +46,7 @@ class YTVideoDownloader:
         :param retries number of download retries before quitting
         :param backoff_factor the exponential time offset in seconds to wait before retrying
         :param file_name_template the name format of the video file to be downloaded
+        :returns a dict key = file name, value = dict of video data
         """
 
         filet_type = "mp3"
@@ -70,6 +71,8 @@ class YTVideoDownloader:
                 self._replace_video_with_static_image(entry, os.path.join(output_dir, file_name), album_image)
                 continue
             self._create_video_from_audio_with_static_image(entry, os.path.join(output_dir, file_name), album_image)
+
+        return results
 
     def download(self, url: str, output_dir: str, file_format: str = "mp4", with_meta: bool = True, retries: int = 5,
                  backoff_factor: float = 1, show_album_cover_on_mp3: bool = True, subfolder_playlists: bool = True,
