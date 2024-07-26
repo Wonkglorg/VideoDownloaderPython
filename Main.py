@@ -3,6 +3,7 @@ import argparse
 from VideoDownloaderCLI import VideoDownloaderCLI
 from VideoDownloaderUI import VideoDownloaderUI
 
+#todo:jmd add documentation
 
 # todo:jmd open ui if file is clicked directly and not opened using cmd.
 

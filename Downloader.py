@@ -403,9 +403,7 @@ class YTVideoDownloader:
 
         subprocess.run(cmd, check=True)
 
-        # If the input file and output file are the same, replace the input file with the temporary output file
         if os.path.abspath(input_file) == os.path.abspath(output_file):
             os.replace(temp_output_file, output_file)
         else:
-            # Otherwise, move the temporary output file to the desired output file
             os.rename(temp_output_file, output_file)
