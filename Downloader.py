@@ -27,12 +27,37 @@ class YTVideoDownloader:
         self.video_formats = video_formats
         self.audio_formats = audio_formats
 
-    def download_single_frame_video(self, video_url: str, album_count_image: str, with_metadata: bool = True,
+    def download_single_frame_video(self, url: str, output_dir: str, album_image: str, low_hardware_mode=False,
+                                    with_metadata: bool = True,
+                                    subfolder_playlists: bool = True,
                                     retries: int = 5,
                                     backoff_factor: float = 1,
                                     file_name_template: str = "{title}") -> None:
+        """
 
-        file_format = "mp3"
+        :param the url of the video / playlist to download
+        :param output_dir the path of the output directory
+        :param album_image the path of the album image
+        :param low_hardware_mode if set to true downbloads the mp4 and converts it using a still frame(Takes less CPU but more time to donwload) else downloads the mp3 and converts it to a video (takes more cpu for the encoder but less time to download)
+        :param subfolder_playlists if playlists should be sub foldered based on their playlist name
+        :param threads number of download threads
+        :param retries number of download retries before quitting
+        :param backoff_factor the exponential time offset in seconds to wait before retrying
+        :param file_name_template the name format of the video file to be downloaded
+        """
+
+        filet_type = "mp3"
+        if low_hardware_mode:
+            filet_type = "mp4"
+
+        results = self.download(url, output_dir, filet_type, with_metadata, file_name_template=file_name_template,
+                                subfolder_playlists=subfolder_playlists, retries=retries, backoff_factor=backoff_factor)
+
+        for entry in results:
+            if low_hardware_mode:
+                self._replace_video_with_static_image(entry, output_dir, album_image)
+                continue
+            self._create_video_from_audio_with_static_image(entry, output_dir, album_image)
 
     def download(self, url: str, output_dir: str, file_format: str = "mp4", with_meta: bool = True, retries: int = 5,
                  backoff_factor: float = 1, show_album_cover_on_mp3: bool = True, subfolder_playlists: bool = True,
@@ -40,19 +65,19 @@ class YTVideoDownloader:
                  threads: int = 4,
                  file_name_template: str = "{title}") -> dict:
         """
-        @:parameter url the url of the video / playlist to download \n
-        @:parameter output_dir the path of the output directory \n
-        @:parameter file_format the file format of the video \n
-        @:parameter with_meta if the meta should be injected into the output \n
-        @:parameter retries number of retries to download the video before quitting \n
-        @:parameter create_single_frame_video if the video should be created in a single frame (also requires album_cover_image to be set \n
-        @:parameter backoff_factor the factor to increase the download delay \n
-        @:parameter show_album_cover_on_mp3 if the album cover should be shown on mp3 file formats (if no cover is selected tries to download the first frame from the video as the cover) \n
-        @:parameter album_cover_image the album cover image to use  \n
-        @:parameter subfolder_playlists if playlists should be sub foldered based on their playlist name \n
-        @:parameter threads number of download threads \n
-        @:parameter file_name_template the file name template to use for the file output \n
-        @:returns a dict key = file name, value = dict of video data
+
+        :param url the url of the video / playlist to download \n
+        :param output_dir the path of the output directory \n
+        :param file_format the file format of the video \n
+        :param with_meta if the meta should be injected into the output \n
+        :param retries number of retries to download the video before quitting \n
+        :param backoff_factor the factor to increase the download delay \n
+        :param show_album_cover_on_mp3 if the album cover should be shown on mp3 file formats (if no cover is selected tries to download the first frame from the video as the cover) \n
+        :param album_cover_image the album cover image to use  \n
+        :param subfolder_playlists if playlists should be sub foldered based on their playlist name \n
+        :param threads number of download threads \n
+        :param file_name_template the file name template to use for the file output \n
+        :returns a dict key = file name, value = dict of video data
         """
         os.makedirs(output_dir, exist_ok=True)
         file_format = file_format.lower()
@@ -253,18 +278,29 @@ class YTVideoDownloader:
     @staticmethod
     def _add_metadata_to_file(input_file, output_file, meta_data):
         cmd = [
-            'ffmpeg', '-i', input_file, '-metadata', f'title={meta_data["title"]}',
-            '-metadata', f'artist={meta_data["artist"]}', '-metadata', f'album={meta_data["album"]}',
-            '-metadata', f'genre={meta_data["genre"]}', '-metadata', f'date={meta_data["release_date"]}',
-            '-metadata', f'track={meta_data["track_number"]}', '-c', 'copy', output_file
+            'ffmpeg', '-i', input_file,
+            '-metadata', f'title={meta_data["title"]}',
+            '-metadata', f'artist={meta_data["artist"]}',
+            '-metadata', f'album={meta_data["album"]}',
+            '-metadata', f'genre={meta_data["genre"]}',
+            '-metadata', f'date={meta_data["release_date"]}',
+            '-metadata', f'track={meta_data["track_number"]}',
+            '-c', 'copy', output_file
         ]
         subprocess.run(cmd, check=True)
 
     @staticmethod
     def _add_cover_image_to_audio(input_file, output_file, cover_image_file):
         cmd = [
-            'ffmpeg', '-i', input_file, '-i', cover_image_file, '-map', '0', '-map', '1', '-c', 'copy',
-            '-id3v2_version', '3', '-metadata:s:v', 'title="Album cover"', '-metadata:s:v', 'comment="Cover (front)"',
+            'ffmpeg',
+            '-i', input_file,
+            '-i', cover_image_file,
+            '-map', '0',
+            '-map', '1',
+            '-c', 'copy',
+            '-id3v2_version', '3',
+            '-metadata:s:v', 'title="Album cover"',
+            '-metadata:s:v', 'comment="Cover (front)"',
             output_file
         ]
         subprocess.run(cmd, check=True)
@@ -275,4 +311,64 @@ class YTVideoDownloader:
             'ffmpeg', '-i', input_file, '-i', cover_image_file, '-map', '0', '-map', '1', '-c', 'copy', '-metadata:s:v',
             'title="Album cover"', '-metadata:s:v', 'comment="Cover (front)"', output_file
         ]
+        subprocess.run(cmd, check=True)
+
+    @staticmethod
+    def _create_video_from_audio_with_static_image(input_file: str, output_file: str, image_file: str) -> None:
+        """
+        Creates a video format out of audio and a static image, mimicking mp3's with album covers
+        :param input_file: the audio file to convert
+        :param output_file: the final output
+        :param image_file: the static image file
+        """
+        video_codec = "libx264"
+        audio_codec = "copy"
+        image_format = "yuv420p"
+        frame_rate = "1"
+
+        cmd = [
+            'ffmpeg',
+            '-i', input_file,  # Input audio
+            '-i', image_file,  # Input image
+            '-c:v', video_codec,  # Video codec to use
+            '-r', frame_rate,  # Frame rate
+            '-pix_fmt', image_format,  # Pixel format
+            '-loop', '1',  # Loop the image
+            '-c:a', audio_codec,  # Audio codec
+            '-strict', 'experimental',
+            '-b:a', '192k',  # Audio bitrate
+            '-shortest',  # Stop when the shortest input ends
+            '-y',  # Overwrite output files without asking
+            output_file
+        ]
+
+        subprocess.run(cmd, check=True)
+
+    @staticmethod
+    def _replace_video_with_static_image(input_file, output_file, image_file):
+        """
+        Replaces a video with a static image mimicking an mp3 with an album cover
+        :param input_file: the video file to convert
+        :param output_file: the final output
+        :param image_file: the static image file
+        """
+        video_codec = "libx264"
+        audio_codec = "copy"
+        image_format = "yuv420p"
+        frame_rate = "1"
+
+        cmd = [
+            'ffmpeg',
+            '-i', input_file,  # Input video
+            '-i', image_file,  # Input image
+            '-c:v', video_codec,  # Video codec to use
+            '-r', frame_rate,  # Frame rate
+            '-pix_fmt', image_format,  # Pixel format
+            '-map', '0:a?',  # Map audio if it exists
+            '-map', '1:0',  # Map image from the second file
+            '-c:a', audio_codec,  # Copy audio without re-encoding
+            '-y',  # Overwrite output files without asking
+            output_file
+        ]
+
         subprocess.run(cmd, check=True)
