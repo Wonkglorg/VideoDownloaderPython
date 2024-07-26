@@ -1,13 +1,20 @@
 import argparse
+import sys
 
 from VideoDownloaderCLI import VideoDownloaderCLI
 from VideoDownloaderUI import VideoDownloaderUI
 
-#todo:jmd add documentation
+
+# todo:jmd add documentation
 
 # todo:jmd open ui if file is clicked directly and not opened using cmd.
 
 def main():
+    if len(sys.argv) == 1:
+        # No arguments provided, default to UI mode
+        VideoDownloaderUI('', '', '', '', True, False, True, True, False, 5, 1, 4, "%(name)")
+        return 0
+
     parser = argparse.ArgumentParser(description="YouTube Video Downloader with optional UI")
     parser.add_argument('--ui', action='store_true', help="Launch the downloader with a graphical user interface")
     parser.add_argument('-url', type=str, required=True, help="The URL of the video or playlist to download")

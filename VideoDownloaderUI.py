@@ -26,6 +26,8 @@ class VideoDownloaderUI:
                  threads: int,
                  file_name_template: str
                  ):
+
+
         # Create the main window
         root = tk.Tk()
         root.title("YouTube Downloader and Converter")

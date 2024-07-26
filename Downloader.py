@@ -59,7 +59,7 @@ class YTVideoDownloader:
         if subfolder_playlists:
             if len(results) > 1:
                 playlist_name = results.get(list(results)[0]).get('playlist', '')
-                if playlist_name is not '':
+                if playlist_name != '':
                     sanitized_playlist_name = self._sanitize_for_windows(playlist_name)
                     playlist_dir = os.path.join(output_dir, sanitized_playlist_name)
                     os.makedirs(playlist_dir, exist_ok=True)
