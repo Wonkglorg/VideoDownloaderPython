@@ -12,6 +12,8 @@ from urllib3.connection import HTTPSConnection
 from urllib3.exceptions import ReadTimeoutError
 
 
+# todo:jmd file_name_template is not working atm and just uses default values.
+
 class YTVideoDownloader:
 
     def __init__(self):
@@ -53,11 +55,21 @@ class YTVideoDownloader:
         results = self.download(url, output_dir, filet_type, with_metadata, file_name_template=file_name_template,
                                 subfolder_playlists=subfolder_playlists, retries=retries, backoff_factor=backoff_factor)
 
+        if subfolder_playlists:
+            if len(results) > 1:
+                playlist_name = results.get(list(results)[0]).get('playlist', '')
+                if playlist_name is not '':
+                    sanitized_playlist_name = self._sanitize_for_windows(playlist_name)
+                    playlist_dir = os.path.join(output_dir, sanitized_playlist_name)
+                    os.makedirs(playlist_dir, exist_ok=True)
+                    output_dir = playlist_dir
+
         for entry in results:
+            file_name = os.path.basename(entry)
             if low_hardware_mode:
-                self._replace_video_with_static_image(entry, output_dir, album_image)
+                self._replace_video_with_static_image(entry, os.path.join(output_dir, file_name), album_image)
                 continue
-            self._create_video_from_audio_with_static_image(entry, output_dir, album_image)
+            self._create_video_from_audio_with_static_image(entry, os.path.join(output_dir, file_name), album_image)
 
     def download(self, url: str, output_dir: str, file_format: str = "mp4", with_meta: bool = True, retries: int = 5,
                  backoff_factor: float = 1, show_album_cover_on_mp3: bool = True, subfolder_playlists: bool = True,
@@ -326,6 +338,8 @@ class YTVideoDownloader:
         image_format = "yuv420p"
         frame_rate = "1"
 
+        output_file_mp4 = os.path.splitext(output_file)[0] + '.mp4'
+
         cmd = [
             'ffmpeg',
             '-i', input_file,  # Input audio
@@ -339,10 +353,13 @@ class YTVideoDownloader:
             '-b:a', '192k',  # Audio bitrate
             '-shortest',  # Stop when the shortest input ends
             '-y',  # Overwrite output files without asking
-            output_file
+            output_file_mp4
         ]
 
         subprocess.run(cmd, check=True)
+
+        if os.path.exists(input_file):
+            os.remove(input_file)
 
     @staticmethod
     def _replace_video_with_static_image(input_file, output_file, image_file):
@@ -357,6 +374,8 @@ class YTVideoDownloader:
         image_format = "yuv420p"
         frame_rate = "1"
 
+        temp_output_file = os.path.splitext(output_file)[0] + '_temp.mp4'
+
         cmd = [
             'ffmpeg',
             '-i', input_file,  # Input video
@@ -368,7 +387,14 @@ class YTVideoDownloader:
             '-map', '1:0',  # Map image from the second file
             '-c:a', audio_codec,  # Copy audio without re-encoding
             '-y',  # Overwrite output files without asking
-            output_file
+            temp_output_file
         ]
 
         subprocess.run(cmd, check=True)
+
+        # If the input file and output file are the same, replace the input file with the temporary output file
+        if os.path.abspath(input_file) == os.path.abspath(output_file):
+            os.replace(temp_output_file, output_file)
+        else:
+            # Otherwise, move the temporary output file to the desired output file
+            os.rename(temp_output_file, output_file)
