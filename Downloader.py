@@ -323,8 +323,16 @@ class YTVideoDownloader:
     @staticmethod
     def _add_cover_image_to_video(input_file, output_file, cover_image_file):
         cmd = [
-            'ffmpeg', '-i', input_file, '-i', cover_image_file, '-map', '0', '-map', '1', '-c', 'copy', '-metadata:s:v',
-            'title="Album cover"', '-metadata:s:v', 'comment="Cover (front)"', output_file
+            'ffmpeg',
+            '-i', input_file,
+            '-i', cover_image_file,
+            '-map', '0',
+            '-map', '1',
+            '-c', 'copy',
+            '-metadata:s:v',
+            'title="Album cover"',
+            '-metadata:s:v',
+            'comment="Cover (front)"', output_file
         ]
         subprocess.run(cmd, check=True)
 
