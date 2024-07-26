@@ -1,7 +1,7 @@
 import argparse
 
-from Downloader import YTVideoDownloader
 from VideoDownloaderCLI import VideoDownloaderCLI
+from VideoDownloaderUI import VideoDownloaderUI
 
 
 # todo:jmd open ui if file is clicked directly and not opened using cmd.
@@ -45,32 +45,16 @@ def main():
     single_frame_video = args.single_frame_video
     low_hardware_mode = args.low_hardware_mode
 
-
     if args.ui:
-        run_with_ui(url, directory, image_path, file_format, show_album_cover_on_mp3, low_hardware_mode, with_meta,
-                    subfolder_playlists, single_frame_video, retries, backoff_factor, threads, file_name_template)
+        VideoDownloaderUI(url, directory, image_path, file_format, show_album_cover_on_mp3, low_hardware_mode,
+                          with_meta,
+                          subfolder_playlists, single_frame_video, retries, backoff_factor, threads,
+                          file_name_template)
     else:
         VideoDownloaderCLI(url, directory, image_path, file_format, show_album_cover_on_mp3, low_hardware_mode,
                            with_meta,
                            subfolder_playlists, single_frame_video, retries, backoff_factor, threads,
                            file_name_template)
-
-
-def run_with_ui(url: str,
-                output_dir: str,
-                album_image: str,
-                file_format: str,
-                show_album_cover_on_mp3: bool,
-                low_hardware_mode: bool,
-                with_metadata: bool,
-                subfolder_playlists: bool,
-                single_frame_video: bool,
-                retries: int,
-                backoff_factor: float,
-                threads: int,
-                file_name_template: str):
-    # Placeholder function for the UI mode
-    print("Running with UI...")
 
 
 if __name__ == "__main__":
