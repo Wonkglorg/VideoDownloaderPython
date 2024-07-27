@@ -12,7 +12,7 @@ from VideoDownloaderUI import VideoDownloaderUI
 def main():
     if len(sys.argv) == 1:
         # No arguments provided, default to UI mode
-        VideoDownloaderUI('', '', '', '', True, False, True, True, False, 5, 1, 4, "%(name)")
+        VideoDownloaderUI()
         return 0
 
     parser = argparse.ArgumentParser(description="YouTube Video Downloader with optional UI")

@@ -5,59 +5,178 @@ from tkinter import filedialog, messagebox
 
 import yt_dlp
 
+from Downloader import YTVideoDownloader
+
 
 # todo:jmd correctly input ui values from inputs, or run defaults.
 # Add defaults global values to make sure they all are the same and don't need changes in so many places
 
+class ToolTip:
+    def __init__(self, widget, text):
+        self.widget = widget
+        self.text = text
+        self.tooltip_window = None
+        self.widget.bind("<Enter>", self.show_tooltip)
+        self.widget.bind("<Leave>", self.hide_tooltip)
+
+    def show_tooltip(self, event):
+        if self.tooltip_window or not self.text:
+            return
+        x, y, _, _ = self.widget.bbox("insert")
+        x += self.widget.winfo_rootx() + 25
+        y += self.widget.winfo_rooty() + 25
+        self.tooltip_window = tw = tk.Toplevel(self.widget)
+        tw.wm_overrideredirect(True)
+        tw.wm_geometry(f"+{x}+{y}")
+        label = tk.Label(tw, text=self.text, justify='left',
+                         background="#ffffff", relief='solid', borderwidth=1,
+                         font=("tahoma", "8", "normal"))
+        label.pack(ipadx=1)
+
+    def hide_tooltip(self, event):
+        if self.tooltip_window:
+            self.tooltip_window.destroy()
+        self.tooltip_window = None
+
 
 class VideoDownloaderUI:
-    def __init__(self,
-                 url: str,
-                 output_dir: str,
-                 album_image: str,
-                 file_format: str,
-                 show_album_cover_on_mp3: bool,
-                 low_hardware_mode: bool,
-                 with_metadata: bool,
-                 subfolder_playlists: bool,
-                 single_frame_video: bool,
-                 retries: int,
-                 backoff_factor: float,
-                 threads: int,
-                 file_name_template: str
-                 ):
+    downloader = YTVideoDownloader()
 
+    def __init__(self,
+                 url: str = "",
+                 output_dir: str = "",
+                 album_image: str = "",
+                 file_format: str = "mp4",
+                 show_album_cover_on_mp3: bool = True,
+                 low_hardware_mode: bool = False,
+                 with_metadata: bool = True,
+                 subfolder_playlists: bool = True,
+                 single_frame_video: bool = False,
+                 retries: int = 5,
+                 backoff_factor: float = 1.0,
+                 threads: int = 4,
+                 file_name_template: str = "%(name)"
+                 ):
+        self.url = url
+        self.output_dir = output_dir
+        self.album_image = album_image
+        self.file_format = file_format
+        self.show_album_cover_on_mp3 = show_album_cover_on_mp3
+        self.low_hardware_mode = low_hardware_mode
+        self.with_metadata = with_metadata
+        self.subfolder_playlists = subfolder_playlists
+        self.single_frame_video = single_frame_video
+        self.retries = retries
+        self.backoff_factor = backoff_factor
+        self.threads = threads
+        self.file_name_template = file_name_template
 
         # Create the main window
-        root = tk.Tk()
-        root.title("YouTube Downloader and Converter")
+        self.root = tk.Tk()
+        self.root.title("YouTube Downloader and Converter")
 
         # URL Entry
-        tk.Label(root, text="YouTube URL:").grid(row=0, column=0, padx=10, pady=10)
-        url_entry = tk.Entry(root, width=50)
-        url_entry.grid(row=0, column=1, padx=10, pady=10)
+        tk.Label(self.root, text="YouTube URL:").grid(row=0, column=0, padx=10, pady=10)
+        self.url_entry = tk.Entry(self.root, width=50)
+        self.url_entry.grid(row=0, column=1, padx=10, pady=10)
+        self.url_entry.insert(0, self.url)
+        ToolTip(self.url_entry, "Enter the URL of the YouTube video you want to download.")
 
         # Output Directory Entry
-        tk.Label(root, text="Output Directory (optional):").grid(row=1, column=0, padx=10, pady=10)
-        dir_entry = tk.Entry(root, width=50)
-        dir_entry.grid(row=1, column=1, padx=10, pady=10)
-        tk.Button(root, text="Browse", command=browse_directory).grid(row=1, column=2, padx=10, pady=10)
+        tk.Label(self.root, text="Output Directory (optional):").grid(row=1, column=0, padx=10, pady=10)
+        self.dir_entry = tk.Entry(self.root, width=50)
+        self.dir_entry.grid(row=1, column=1, padx=10, pady=10)
+        self.dir_entry.insert(0, self.output_dir)
+        tk.Button(self.root, text="Browse", command=browse_directory).grid(row=1, column=2, padx=10, pady=10)
 
         # Thumbnail Entry
-        tk.Label(root, text="Thumbnail Image:").grid(row=2, column=0, padx=10, pady=10)
-        thumbnail_entry = tk.Entry(root, width=50)
-        thumbnail_entry.grid(row=2, column=1, padx=10, pady=10)
-        tk.Button(root, text="Browse", command=browse_thumbnail).grid(row=2, column=2, padx=10, pady=10)
+        tk.Label(self.root, text="Thumbnail Image:").grid(row=2, column=0, padx=10, pady=10)
+        self.thumbnail_entry = tk.Entry(self.root, width=50)
+        self.thumbnail_entry.grid(row=2, column=1, padx=10, pady=10)
+        self.thumbnail_entry.insert(0, self.album_image)
+        tk.Button(self.root, text="Browse", command=browse_thumbnail).grid(row=2, column=2, padx=10, pady=10)
 
-        # MP4 Download Option
-        mp4_var = tk.BooleanVar(value=True)
-        tk.Checkbutton(root, text="Download as MP4", variable=mp4_var).grid(row=3, column=1, padx=10, pady=10)
+        # File Format Option
+        tk.Label(self.root, text="File Format:").grid(row=3, column=0, padx=10, pady=10)
+        self.file_format_var = tk.StringVar(value=self.file_format)
+        all_formats = self.downloader.video_formats + self.downloader.audio_formats
+        tk.OptionMenu(self.root, self.file_format_var, *all_formats).grid(row=3, column=1, padx=10, pady=10)
+
+        # Show Album Cover on MP3 Option
+        self.album_cover_var = tk.BooleanVar(value=self.show_album_cover_on_mp3)
+        tk.Checkbutton(self.root, text="Show Album Cover on MP3", variable=self.album_cover_var).grid(row=4, column=0,
+                                                                                                      padx=10, pady=10)
+
+        # Low Hardware Mode Option
+        self.low_hardware_var = tk.BooleanVar(value=self.low_hardware_mode)
+        tk.Checkbutton(self.root, text="Low Hardware Mode", variable=self.low_hardware_var).grid(row=4, column=1,
+                                                                                                 padx=10, pady=10)
+
+        # With Metadata Option
+        self.with_metadata_var = tk.BooleanVar(value=self.with_metadata)
+        tk.Checkbutton(self.root, text="Include Metadata", variable=self.with_metadata_var).grid(row=5, column=0,
+                                                                                                 padx=10, pady=10)
+
+        # Subfolder Playlists Option
+        self.subfolder_playlists_var = tk.BooleanVar(value=self.subfolder_playlists)
+        tk.Checkbutton(self.root, text="Subfolder for Playlists", variable=self.subfolder_playlists_var).grid(row=5,
+                                                                                                              column=1,
+                                                                                                              padx=10,
+                                                                                                              pady=10)
+
+        # Single Frame Video Option
+        self.single_frame_video_var = tk.BooleanVar(value=self.single_frame_video)
+        tk.Checkbutton(self.root, text="Single Frame Video", variable=self.single_frame_video_var).grid(row=6, column=0,
+                                                                                                        padx=10,
+                                                                                                        pady=10)
+
+        # Retries Entry
+        tk.Label(self.root, text="Retries:").grid(row=6, column=1, padx=10, pady=10)
+        self.retries_entry = tk.Entry(self.root, width=5)
+        self.retries_entry.grid(row=6, column=2, padx=10, pady=10)
+        self.retries_entry.insert(0, self.retries)
+
+        # Backoff Factor Entry
+        tk.Label(self.root, text="Backoff Factor:").grid(row=7, column=0, padx=10, pady=10)
+        self.backoff_entry = tk.Entry(self.root, width=5)
+        self.backoff_entry.grid(row=7, column=1, padx=10, pady=10)
+        self.backoff_entry.insert(0, self.backoff_factor)
+
+        # Threads Entry
+        tk.Label(self.root, text="Threads:").grid(row=7, column=2, padx=10, pady=10)
+        self.threads_entry = tk.Entry(self.root, width=5)
+        self.threads_entry.grid(row=7, column=3, padx=10, pady=10)
+        self.threads_entry.insert(0, self.threads)
+
+        # File Name Template Entry
+        tk.Label(self.root, text="File Name Template:").grid(row=8, column=0, padx=10, pady=10)
+        self.template_entry = tk.Entry(self.root, width=50)
+        self.template_entry.grid(row=8, column=1, padx=10, pady=10)
+        self.template_entry.insert(0, self.file_name_template)
 
         # Submit Button
-        tk.Button(root, text="Download and Convert", command=process_input).grid(row=4, column=1, padx=10, pady=20)
+        tk.Button(self.root, text="Download and Convert", command=self.process_input).grid(row=9, column=1, padx=10,
+                                                                                           pady=20)
 
         # Run the main loop
-        root.mainloop()
+        self.root.mainloop()
+
+    def process_input(self):
+        # Placeholder function to process input and start download/conversion
+        print("Processing input...")
+        print("URL:", self.url_entry.get())
+        print("Output Directory:", self.dir_entry.get())
+        print("Thumbnail Image:", self.thumbnail_entry.get())
+        print("File Format:", self.file_format_var.get())
+        print("Show Album Cover on MP3:", self.album_cover_var.get())
+        print("Low Hardware Mode:", self.low_hardware_var.get())
+        print("Include Metadata:", self.with_metadata_var.get())
+        print("Subfolder for Playlists:", self.subfolder_playlists_var.get())
+        print("Single Frame Video:", self.single_frame_video_var.get())
+        print("Retries:", self.retries_entry.get())
+        print("Backoff Factor:", self.backoff_entry.get())
+        print("Threads:", self.threads_entry.get())
+        print("File Name Template:", self.template_entry.get())
 
 
 def process_input():
