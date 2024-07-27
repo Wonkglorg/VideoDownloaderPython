@@ -1,14 +1,15 @@
 import os
 import subprocess
-import tkinter as tk
 from tkinter import filedialog, messagebox
 
+import customtkinter as ctk
 import yt_dlp
 
 from Downloader import YTVideoDownloader
 
 
 # todo:jmd correctly input ui values from inputs, or run defaults.
+# todo: show tooltops for all entries
 # todo, add option to show previews of the downloaded videos, so I can choose to only get some of them (should clear each selection, so it lets me stilluse the album as a way to seperate them)
 # Curreent method is relativly slow for getting preview dat aoptimize later.
 # Add defaults global values to make sure they all are the same and don't need changes in so many places
@@ -27,19 +28,18 @@ class ToolTip:
         x, y, _, _ = self.widget.bbox("insert")
         x += self.widget.winfo_rootx() + 25
         y += self.widget.winfo_rooty() + 25
-        self.tooltip_window = tw = tk.Toplevel(self.widget)
+        self.tooltip_window = tw = ctk.CTkToplevel(self.widget)
         tw.wm_overrideredirect(True)
         tw.wm_geometry(f"+{x}+{y}")
-        label = tk.Label(tw, text=self.text, justify='left',
-                         background="#ffffff", relief='solid', borderwidth=1,
-                         font=("tahoma", "8", "normal"))
-        label.pack(ipadx=1)
+        label = ctk.CTkLabel(tw, text=self.text, justify='left',
+                             fg_color="white", corner_radius=5,
+                             text_color="black", font=("tahoma", 12))
+        label.pack(ipadx=1, ipady=1)
 
     def hide_tooltip(self, event):
         if self.tooltip_window:
             self.tooltip_window.destroy()
         self.tooltip_window = None
-
 
 class VideoDownloaderUI:
     downloader = YTVideoDownloader()
@@ -74,94 +74,115 @@ class VideoDownloaderUI:
         self.file_name_template = file_name_template
 
         # Create the main window
-        self.root = tk.Tk()
+        self.root = ctk.CTk()
         self.root.title("YouTube Downloader and Converter")
 
         # URL Entry
-        tk.Label(self.root, text="YouTube URL:").grid(row=0, column=0, padx=10, pady=10)
-        self.url_entry = tk.Entry(self.root, width=50)
+        ctk.CTkLabel(self.root, text="YouTube URL:").grid(row=0, column=0, padx=10, pady=10)
+        self.url_entry = ctk.CTkEntry(self.root, width=400)
         self.url_entry.grid(row=0, column=1, padx=10, pady=10)
         self.url_entry.insert(0, self.url)
         ToolTip(self.url_entry, "Enter the URL of the YouTube video you want to download.")
 
         # Output Directory Entry
-        tk.Label(self.root, text="Output Directory (optional):").grid(row=1, column=0, padx=10, pady=10)
-        self.dir_entry = tk.Entry(self.root, width=50)
+        ctk.CTkLabel(self.root, text="Output Directory (optional):").grid(row=1, column=0, padx=10, pady=10)
+        self.dir_entry = ctk.CTkEntry(self.root, width=400)
         self.dir_entry.grid(row=1, column=1, padx=10, pady=10)
         self.dir_entry.insert(0, self.output_dir)
-        tk.Button(self.root, text="Browse", command=browse_directory).grid(row=1, column=2, padx=10, pady=10)
+        ctk.CTkButton(self.root, text="Browse", command=self.browse_directory).grid(row=1, column=2, padx=10, pady=10)
+        ToolTip(self.dir_entry, "Select the directory where the downloaded files will be saved.")
 
         # Thumbnail Entry
-        tk.Label(self.root, text="Thumbnail Image:").grid(row=2, column=0, padx=10, pady=10)
-        self.thumbnail_entry = tk.Entry(self.root, width=50)
+        ctk.CTkLabel(self.root, text="Thumbnail Image:").grid(row=2, column=0, padx=10, pady=10)
+        self.thumbnail_entry = ctk.CTkEntry(self.root, width=400)
         self.thumbnail_entry.grid(row=2, column=1, padx=10, pady=10)
         self.thumbnail_entry.insert(0, self.album_image)
-        tk.Button(self.root, text="Browse", command=browse_thumbnail).grid(row=2, column=2, padx=10, pady=10)
+        ctk.CTkButton(self.root, text="Browse", command=self.browse_thumbnail).grid(row=2, column=2, padx=10, pady=10)
+        ToolTip(self.thumbnail_entry, "Select the thumbnail image for the video.")
 
         # File Format Option
-        tk.Label(self.root, text="File Format:").grid(row=3, column=0, padx=10, pady=10)
-        self.file_format_var = tk.StringVar(value=self.file_format)
+        ctk.CTkLabel(self.root, text="File Format:").grid(row=3, column=0, padx=10, pady=10)
+        self.file_format_var = ctk.StringVar(value=self.file_format)
         all_formats = self.downloader.video_formats + self.downloader.audio_formats
-        tk.OptionMenu(self.root, self.file_format_var, *all_formats).grid(row=3, column=1, padx=10, pady=10)
+        self.file_format_menu = ctk.CTkOptionMenu(self.root, variable=self.file_format_var, values=all_formats)
+        self.file_format_menu.grid(row=3, column=1, padx=10, pady=10)
+        ToolTip(self.file_format_menu, "Choose the format for the downloaded file.")
 
         # Show Album Cover on MP3 Option
-        self.album_cover_var = tk.BooleanVar(value=self.show_album_cover_on_mp3)
-        tk.Checkbutton(self.root, text="Show Album Cover on MP3", variable=self.album_cover_var).grid(row=4, column=0,
-                                                                                                      padx=10, pady=10)
+        self.album_cover_var = ctk.BooleanVar(value=self.show_album_cover_on_mp3)
+        self.album_cover_check = ctk.CTkCheckBox(self.root, text="Show Album Cover on MP3", variable=self.album_cover_var)
+        self.album_cover_check.grid(row=4, column=0, padx=10, pady=10)
+        ToolTip(self.album_cover_check, "Show album cover when downloading MP3 files.")
 
         # Low Hardware Mode Option
-        self.low_hardware_var = tk.BooleanVar(value=self.low_hardware_mode)
-        tk.Checkbutton(self.root, text="Low Hardware Mode", variable=self.low_hardware_var).grid(row=4, column=1,
-                                                                                                 padx=10, pady=10)
+        self.low_hardware_var = ctk.BooleanVar(value=self.low_hardware_mode)
+        self.low_hardware_check = ctk.CTkCheckBox(self.root, text="Low Hardware Mode", variable=self.low_hardware_var)
+        self.low_hardware_check.grid(row=4, column=1, padx=10, pady=10)
+        ToolTip(self.low_hardware_check, "Enable low hardware mode for slower computers.")
 
         # With Metadata Option
-        self.with_metadata_var = tk.BooleanVar(value=self.with_metadata)
-        tk.Checkbutton(self.root, text="Include Metadata", variable=self.with_metadata_var).grid(row=5, column=0,
-                                                                                                 padx=10, pady=10)
+        self.with_metadata_var = ctk.BooleanVar(value=self.with_metadata)
+        self.with_metadata_check = ctk.CTkCheckBox(self.root, text="Include Metadata", variable=self.with_metadata_var)
+        self.with_metadata_check.grid(row=5, column=0, padx=10, pady=10)
+        ToolTip(self.with_metadata_check, "Include metadata in the downloaded files.")
 
         # Subfolder Playlists Option
-        self.subfolder_playlists_var = tk.BooleanVar(value=self.subfolder_playlists)
-        tk.Checkbutton(self.root, text="Subfolder for Playlists", variable=self.subfolder_playlists_var).grid(row=5,
-                                                                                                              column=1,
-                                                                                                              padx=10,
-                                                                                                              pady=10)
+        self.subfolder_playlists_var = ctk.BooleanVar(value=self.subfolder_playlists)
+        self.subfolder_playlists_check = ctk.CTkCheckBox(self.root, text="Subfolder for Playlists", variable=self.subfolder_playlists_var)
+        self.subfolder_playlists_check.grid(row=5, column=1, padx=10, pady=10)
+        ToolTip(self.subfolder_playlists_check, "Create subfolders for playlist downloads.")
 
         # Single Frame Video Option
-        self.single_frame_video_var = tk.BooleanVar(value=self.single_frame_video)
-        tk.Checkbutton(self.root, text="Single Frame Video", variable=self.single_frame_video_var).grid(row=6, column=0,
-                                                                                                        padx=10,
-                                                                                                        pady=10)
+        self.single_frame_video_var = ctk.BooleanVar(value=self.single_frame_video)
+        self.single_frame_video_check = ctk.CTkCheckBox(self.root, text="Single Frame Video", variable=self.single_frame_video_var)
+        self.single_frame_video_check.grid(row=6, column=0, padx=10, pady=10)
+        ToolTip(self.single_frame_video_check, "Download only a single frame of the video.")
 
         # Retries Entry
-        tk.Label(self.root, text="Retries:").grid(row=6, column=1, padx=10, pady=10)
-        self.retries_entry = tk.Entry(self.root, width=5)
+        ctk.CTkLabel(self.root, text="Retries:").grid(row=6, column=1, padx=10, pady=10)
+        self.retries_entry = ctk.CTkEntry(self.root, width=50)
         self.retries_entry.grid(row=6, column=2, padx=10, pady=10)
         self.retries_entry.insert(0, self.retries)
+        ToolTip(self.retries_entry, "Set the number of retries for downloading.")
 
         # Backoff Factor Entry
-        tk.Label(self.root, text="Backoff Factor:").grid(row=7, column=0, padx=10, pady=10)
-        self.backoff_entry = tk.Entry(self.root, width=5)
+        ctk.CTkLabel(self.root, text="Backoff Factor:").grid(row=7, column=0, padx=10, pady=10)
+        self.backoff_entry = ctk.CTkEntry(self.root, width=50)
         self.backoff_entry.grid(row=7, column=1, padx=10, pady=10)
         self.backoff_entry.insert(0, self.backoff_factor)
+        ToolTip(self.backoff_entry, "Set the backoff factor for retries.")
 
         # Threads Entry
-        tk.Label(self.root, text="Threads:").grid(row=7, column=2, padx=10, pady=10)
-        self.threads_entry = tk.Entry(self.root, width=5)
+        ctk.CTkLabel(self.root, text="Threads:").grid(row=7, column=2, padx=10, pady=10)
+        self.threads_entry = ctk.CTkEntry(self.root, width=50)
         self.threads_entry.grid(row=7, column=3, padx=10, pady=10)
         self.threads_entry.insert(0, self.threads)
+        ToolTip(self.threads_entry, "Set the number of threads for downloading.")
 
         # File Name Template Entry
-        tk.Label(self.root, text="File Name Template:").grid(row=8, column=0, padx=10, pady=10)
-        self.template_entry = tk.Entry(self.root, width=50)
+        ctk.CTkLabel(self.root, text="File Name Template:").grid(row=8, column=0, padx=10, pady=10)
+        self.template_entry = ctk.CTkEntry(self.root, width=400)
         self.template_entry.grid(row=8, column=1, padx=10, pady=10)
         self.template_entry.insert(0, self.file_name_template)
+        ToolTip(self.template_entry, "Set the template for the file name.")
 
         # Submit Button
-        tk.Button(self.root, text="Download and Convert", command=self.process_input).grid(row=9, column=1, padx=10,
-                                                                                           pady=20)
+        ctk.CTkButton(self.root, text="Download and Convert", command=self.process_input).grid(row=9, column=1, padx=10, pady=20)
 
         # Run the main loop
         self.root.mainloop()
+
+    def browse_directory(self):
+        directory = filedialog.askdirectory()
+        if directory:
+            self.dir_entry.delete(0, ctk.END)
+            self.dir_entry.insert(0, directory)
+
+    def browse_thumbnail(self):
+        thumbnail = filedialog.askopenfilename(filetypes=[("Image files", "*.jpg;*.png")])
+        if thumbnail:
+            self.thumbnail_entry.delete(0, ctk.END)
+            self.thumbnail_entry.insert(0, thumbnail)
 
     def process_input(self):
         # Placeholder function to process input and start download/conversion
@@ -206,20 +227,6 @@ def process_input():
         main(url, output_dir, thumbnail_file, download_as_mp4)
     except Exception as e:
         messagebox.showerror("Error", str(e))
-
-
-def browse_directory():
-    directory = filedialog.askdirectory()
-    if directory:
-        dir_entry.delete(0, tk.END)
-        dir_entry.insert(0, directory)
-
-
-def browse_thumbnail():
-    file = filedialog.askopenfilename(filetypes=[("Image Files", "*.png;*.jpg;*.jpeg")])
-    if file:
-        thumbnail_entry.delete(0, tk.END)
-        thumbnail_entry.insert(0, file)
 
 
 def main(url, output_dir, thumbnail_file, download_as_mp4):
