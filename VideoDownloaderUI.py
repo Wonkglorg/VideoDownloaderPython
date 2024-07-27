@@ -9,6 +9,8 @@ from Downloader import YTVideoDownloader
 
 
 # todo:jmd correctly input ui values from inputs, or run defaults.
+# todo, add option to show previews of the downloaded videos, so I can choose to only get some of them (should clear each selection, so it lets me stilluse the album as a way to seperate them)
+# Curreent method is relativly slow for getting preview dat aoptimize later.
 # Add defaults global values to make sure they all are the same and don't need changes in so many places
 
 class ToolTip:
