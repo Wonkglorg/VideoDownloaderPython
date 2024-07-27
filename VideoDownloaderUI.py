@@ -41,6 +41,7 @@ class ToolTip:
             self.tooltip_window.destroy()
         self.tooltip_window = None
 
+
 class VideoDownloaderUI:
     downloader = YTVideoDownloader()
 
@@ -110,7 +111,8 @@ class VideoDownloaderUI:
 
         # Show Album Cover on MP3 Option
         self.album_cover_var = ctk.BooleanVar(value=self.show_album_cover_on_mp3)
-        self.album_cover_check = ctk.CTkCheckBox(self.root, text="Show Album Cover on MP3", variable=self.album_cover_var)
+        self.album_cover_check = ctk.CTkCheckBox(self.root, text="Show Album Cover on MP3",
+                                                 variable=self.album_cover_var)
         self.album_cover_check.grid(row=4, column=0, padx=10, pady=10)
         ToolTip(self.album_cover_check, "Show album cover when downloading MP3 files.")
 
@@ -128,13 +130,15 @@ class VideoDownloaderUI:
 
         # Subfolder Playlists Option
         self.subfolder_playlists_var = ctk.BooleanVar(value=self.subfolder_playlists)
-        self.subfolder_playlists_check = ctk.CTkCheckBox(self.root, text="Subfolder for Playlists", variable=self.subfolder_playlists_var)
+        self.subfolder_playlists_check = ctk.CTkCheckBox(self.root, text="Subfolder for Playlists",
+                                                         variable=self.subfolder_playlists_var)
         self.subfolder_playlists_check.grid(row=5, column=1, padx=10, pady=10)
         ToolTip(self.subfolder_playlists_check, "Create subfolders for playlist downloads.")
 
         # Single Frame Video Option
         self.single_frame_video_var = ctk.BooleanVar(value=self.single_frame_video)
-        self.single_frame_video_check = ctk.CTkCheckBox(self.root, text="Single Frame Video", variable=self.single_frame_video_var)
+        self.single_frame_video_check = ctk.CTkCheckBox(self.root, text="Single Frame Video",
+                                                        variable=self.single_frame_video_var)
         self.single_frame_video_check.grid(row=6, column=0, padx=10, pady=10)
         ToolTip(self.single_frame_video_check, "Download only a single frame of the video.")
 
@@ -167,7 +171,8 @@ class VideoDownloaderUI:
         ToolTip(self.template_entry, "Set the template for the file name.")
 
         # Submit Button
-        ctk.CTkButton(self.root, text="Download and Convert", command=self.process_input).grid(row=9, column=1, padx=10, pady=20)
+        ctk.CTkButton(self.root, text="Download and Convert", command=self.process_input).grid(row=9, column=1, padx=10,
+                                                                                               pady=20)
 
         # Run the main loop
         self.root.mainloop()
@@ -184,6 +189,7 @@ class VideoDownloaderUI:
             self.thumbnail_entry.delete(0, ctk.END)
             self.thumbnail_entry.insert(0, thumbnail)
 
+    # Force inputs based on options selected for example when a certain value is toggled require them to add a thumbnail too etc.
     def process_input(self):
         # Placeholder function to process input and start download/conversion
         print("Processing input...")
