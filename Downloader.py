@@ -74,6 +74,12 @@ class YTVideoDownloader:
 
         return results
 
+    def getPreviews(self):
+        """
+        Gets a list of all preview videos
+        :return:
+        """
+
     def download(self, url: str, output_dir: str, file_format: str = "mp4", with_meta: bool = True, retries: int = 5,
                  backoff_factor: float = 1, show_album_cover_on_mp3: bool = True, subfolder_playlists: bool = True,
                  album_cover_image: str = None,

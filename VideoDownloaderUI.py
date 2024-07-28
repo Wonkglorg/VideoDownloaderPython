@@ -19,10 +19,14 @@ class ToolTip:
         self.widget = widget
         self.text = text
         self.tooltip_window = None
-        self.widget.bind("<Enter>", self.show_tooltip)
+        self.id = None
+        self.widget.bind("<Enter>", self.schedule_tooltip)
         self.widget.bind("<Leave>", self.hide_tooltip)
 
-    def show_tooltip(self, event):
+    def schedule_tooltip(self, event):
+        self.id = self.widget.after(500, self.show_tooltip)  # 500ms delay before showing the tooltip
+
+    def show_tooltip(self):
         if self.tooltip_window or not self.text:
             return
         x, y, _, _ = self.widget.bbox("insert")
@@ -32,14 +36,17 @@ class ToolTip:
         tw.wm_overrideredirect(True)
         tw.wm_geometry(f"+{x}+{y}")
         label = ctk.CTkLabel(tw, text=self.text, justify='left',
-                             fg_color="white", corner_radius=5,
-                             text_color="black", font=("tahoma", 12))
+                             bg_color="#000000", fg_color="#000000",
+                             corner_radius=5, font=("Tahoma", 12))
         label.pack(ipadx=1, ipady=1)
 
     def hide_tooltip(self, event):
         if self.tooltip_window:
             self.tooltip_window.destroy()
         self.tooltip_window = None
+        if self.id:
+            self.widget.after_cancel(self.id)
+            self.id = None
 
 
 class VideoDownloaderUI:
@@ -169,6 +176,14 @@ class VideoDownloaderUI:
         self.template_entry.grid(row=8, column=1, padx=10, pady=10)
         self.template_entry.insert(0, self.file_name_template)
         ToolTip(self.template_entry, "Set the template for the file name.")
+
+        quality_preset = "Best"
+
+        # Prefered Quality
+        ctk.CTkLabel(self.root, text="Prfered Quality:").grid(row=9, column=0, padx=10, pady=10)
+        self.file_format_menu = ctk.CTkOptionMenu(self.root, variable=quality_preset, values=all_formats)
+        self.file_format_menu.grid(row=8, column=1, padx=10, pady=10)
+        ToolTip(self.file_format_menu, "Choose the format for the downloaded file.")
 
         # Submit Button
         ctk.CTkButton(self.root, text="Download and Convert", command=self.process_input).grid(row=9, column=1, padx=10,
