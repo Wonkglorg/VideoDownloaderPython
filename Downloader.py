@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import shutil
@@ -31,6 +32,7 @@ class YTVideoDownloader:
 
     def download_single_frame_video(self, url: str, output_dir: str, album_image: str, low_hardware_mode=False,
                                     with_metadata: bool = True,
+                                    download_meta_seperate: bool = False,
                                     subfolder_playlists: bool = True,
                                     retries: int = 5,
                                     backoff_factor: float = 1,
@@ -54,6 +56,7 @@ class YTVideoDownloader:
             filet_type = "mp4"
 
         results = self.download(url, output_dir, filet_type, with_metadata, file_name_template=file_name_template,
+                                download_meta_seperate=download_meta_seperate,
                                 subfolder_playlists=subfolder_playlists, retries=retries, backoff_factor=backoff_factor)
 
         if subfolder_playlists:
@@ -82,6 +85,7 @@ class YTVideoDownloader:
 
     def download(self, url: str, output_dir: str, file_format: str = "mp4", with_meta: bool = True, retries: int = 5,
                  backoff_factor: float = 1, show_album_cover_on_mp3: bool = True, subfolder_playlists: bool = True,
+                 download_meta_seperate: bool = False,
                  album_cover_image: str = None,
                  threads: int = 4,
                  file_name_template: str = "{title}") -> dict:
@@ -114,17 +118,18 @@ class YTVideoDownloader:
 
                     if is_playlist:
                         return self._download_playlist(output_dir, info_dict, file_format, threads, subfolder_playlists,
-                                                       with_meta,
+                                                       with_meta, download_meta_seperate,
                                                        show_album_cover_on_mp3, album_cover_image,
                                                        retries, backoff_factor, file_name_template)
                     else:
                         if file_format in self.audio_formats:
                             return self._download_audio(url, output_dir, info_dict, file_format, with_meta,
-                                                        show_album_cover_on_mp3, album_cover_image,
+                                                        download_meta_seperate, show_album_cover_on_mp3,
+                                                        album_cover_image,
                                                         file_name_template)
                         else:
                             return self._download_video(url, output_dir, info_dict, file_format, with_meta,
-                                                        album_cover_image, file_name_template)
+                                                        download_meta_seperate, album_cover_image, file_name_template)
 
             except (yt_dlp.utils.DownloadError, HTTPSConnection, ReadTimeoutError) as e:
                 print(f"Attempt {attempt + 1} failed: {e}")
@@ -137,10 +142,9 @@ class YTVideoDownloader:
                     raise
 
     def _download_playlist(self, output_dir: str, info_dict: dict, file_format: str, threads, subfolder_playlists,
-                           with_meta: bool = True,
-                           show_album_cover: bool = True,
-                           album_cover_image: str = None, retries: int = 5,
-                           backoff_factor: float = 1,
+                           with_meta: bool = True, download_meta_separate: bool = False,
+                           show_album_cover: bool = True, album_cover_image: str = None,
+                           retries: int = 5, backoff_factor: float = 1,
                            file_name_template: str = "{title}") -> dict:
         playlist_name = info_dict.get('title', 'playlist')
         if subfolder_playlists:
@@ -153,8 +157,8 @@ class YTVideoDownloader:
         results = {}
         with ThreadPoolExecutor(max_workers=threads) as executor:
             future_to_entry = {
-                executor.submit(self._download_entry, entry, output_dir, file_format, with_meta, show_album_cover,
-                                album_cover_image, file_name_template, retries, backoff_factor): entry
+                executor.submit(self._download_entry, entry, output_dir, file_format, with_meta, download_meta_separate,
+                                show_album_cover, album_cover_image, file_name_template, retries, backoff_factor): entry
                 for entry in info_dict.get('entries', [])
             }
 
@@ -166,18 +170,18 @@ class YTVideoDownloader:
                     print(f"Download failed for entry {entry['title']}: {e}")
         return results
 
-    def _download_entry(self, entry, output_dir, file_format, with_meta, show_album_cover, album_cover_image,
-                        file_name_template, retries, backoff_factor) -> dict:
+    def _download_entry(self, entry, output_dir, file_format, with_meta, download_meta_separate,
+                        show_album_cover, album_cover_image, file_name_template, retries, backoff_factor) -> dict:
         for attempt in range(retries):
             try:
                 if file_format in self.audio_formats:
                     return self._download_audio(entry.get("webpage_url"), output_dir, entry,
-                                                file_format, with_meta, show_album_cover,
-                                                album_cover_image, file_name_template)
+                                                file_format, with_meta, download_meta_separate,
+                                                show_album_cover, album_cover_image, file_name_template)
                 else:
                     return self._download_video(entry.get("webpage_url"), output_dir, entry,
-                                                file_format, with_meta, album_cover_image,
-                                                file_name_template)
+                                                file_format, with_meta, download_meta_separate,
+                                                album_cover_image, file_name_template)
             except (yt_dlp.utils.DownloadError, HTTPSConnection, ReadTimeoutError) as e:
                 print(f"Attempt {attempt + 1} failed: {e}")
                 if attempt < retries - 1:
@@ -189,9 +193,8 @@ class YTVideoDownloader:
                     raise
 
     def _download_audio(self, url: str, output_dir: str, info_dict: dict, file_format: str, with_meta: bool = True,
-                        show_album_cover: bool = True,
-                        album_cover_image: str = None,
-                        file_name_template: str = "{title}") -> dict:
+                        download_meta_separate: bool = False, show_album_cover: bool = True,
+                        album_cover_image: str = None, file_name_template: str = "{title}") -> dict:
         meta_data = self._extract_meta_from_info_dict(info_dict)
         file_name = self._resolve_file_name_template(file_name_template, meta_data)
         output_file_path = os.path.join(output_dir, file_name + "." + file_format)
@@ -219,6 +222,11 @@ class YTVideoDownloader:
             shutil.copy(temp_output_file, output_file_path)
             os.remove(temp_output_file)
 
+        if download_meta_separate:
+            meta_file_path = os.path.join(output_dir, file_name + ".meta.json")
+            with open(meta_file_path, 'w') as meta_file:
+                json.dump(info_dict, meta_file, indent=4)
+
         if album_cover_image:
             temp_output_file = tempfile.mktemp(suffix=f".{file_format}")
             self._add_cover_image_to_audio(output_file_path, temp_output_file, album_cover_image)
@@ -227,7 +235,7 @@ class YTVideoDownloader:
         return {output_file_path: info_dict}
 
     def _download_video(self, url: str, output_dir: str, info_dict: dict, file_format: str, with_meta: bool = True,
-                        album_cover_image: str = None,
+                        download_meta_separate: bool = False, album_cover_image: str = None,
                         file_name_template: str = "{title}") -> dict:
         meta_data = self._extract_meta_from_info_dict(info_dict)
         file_name = self._resolve_file_name_template(file_name_template, meta_data)
@@ -249,6 +257,11 @@ class YTVideoDownloader:
             self._add_metadata_to_file(output_file_path, temp_output_file, meta_data)
             shutil.copy(temp_output_file, output_file_path)
             os.remove(temp_output_file)
+
+        if download_meta_separate:
+            meta_file_path = os.path.join(output_dir, file_name + ".meta.json")
+            with open(meta_file_path, 'w') as meta_file:
+                json.dump(info_dict, meta_file, indent=4)
 
         if album_cover_image:
             temp_output_file = tempfile.mktemp(suffix=f".{file_format}")

@@ -34,6 +34,8 @@ def main():
                         help="Template for the output file name (default: {title})")
     parser.add_argument('--single_frame_video', action='store_true', default=False,
                         help="If the Video should be rendered as a single frame (requires an -image to be present")
+    parser.add_argument("--download-meta-seperate", action='store_true', default=False,
+                        help="if meta file should be downloaded seperatly")
     parser.add_argument('--low_hardware_mode', action='store_true', default=False,
                         help="(Only functional when --single_frame_video is present), if true downloads the mp4 and converts it to a still image (requires an less cpu power to convert but longer download times) if false downloads an mp3 version and converts it to an mp4 (requires more cpu power to convert but less download times)")
 
